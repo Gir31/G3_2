@@ -1,92 +1,94 @@
 import queue
 
-# 상태를 나타내는 클래스
 class State:
-    def __init__(self, board, goal, depth=0, parent=None):
-        self.board = board[:]       # 각 행(row)에 queen이 놓인 col (없으면 -1)
-        self.goal = goal            # 목표: queen N개 배치
-        self.depth = depth          # g(n)
-        self.parent = parent
+    def __init__(self, board, depth = 0, N = 0):
+        self.board = board
+        self.depth = depth
+        self.N = N
 
-    # 현재 행(row)에 col에 배치 가능한지 검사
-    def is_safe(self, row, col):
-        for r in range(row):
-            c = self.board[r]
-            if c == col or abs(c - col) == abs(r - row):
-                return False
-        return True
+    def get_new_board(self, row):
+        new_board = self.board[:]
+        new_board[self.depth] = row
+        return State(new_board, self.depth + 1, self.N)
 
-    # 자식 노드 확장
-    def expand(self, depth):
+    def expand(self):
         result = []
-        row = self.depth  # 지금까지 놓은 queen 수 = 다음에 놓을 행
-        if row < self.goal:
-            for col in range(self.goal):
-                if self.is_safe(row, col):
-                    new_board = self.board[:]
-                    new_board[row] = col
-                    result.append(State(new_board, self.goal, depth, parent=self))
+        used_rows = set(self.board[:self.depth])  # 이미 배치된 행 번호
+        for row in range(self.N):
+            if row not in used_rows:  # 이미 사용된 행은 제외
+                result.append(self.get_new_board(row))
         return result
 
-    # f(n) = g(n)+h(n)
     def f(self):
-        return self.g() + self.h()
+        return self.h() + self.g()
 
     def h(self):
-        # 아직 배치해야 하는 queen 개수
-        return self.goal - self.g()
+        score = 0
+        positions = [(self.board[col], col) for col in range(self.depth)]
+
+        for i in range(len(positions)):
+            r1, c1 = positions[i]
+            for j in range(i + 1, len(positions)):
+                r2, c2 = positions[j]
+                # 같은 행
+                if r1 == r2:
+                    score += 1
+                # 같은 대각선
+                if abs(r1 - r2) == abs(c1 - c2):
+                    score += 1
+
+        return score
 
     def g(self):
         return self.depth
 
     def __str__(self):
-        out = ""
-        for r in range(self.goal):
-            row = ""
-            for c in range(self.goal):
-                if self.board[r] == c:
-                    row += "Q "
+        lines = []
+        for r in range(self.N):
+            line = []
+            for c in range(self.N):
+                if c < self.depth and self.board[c] == r:
+                    line.append('Q')
                 else:
-                    row += ". "
-            out += row + "\n"
-        out += "------------------"
-        return out
+                    line.append('.')
+            lines.append(" ".join(line))
+        return "\n".join(lines) + "\n" + "-" * 20
 
     def __eq__(self, other):
         return self.board == other.board
 
+    def __ne__(self, other):
+        return self.board != other.board
+
     def __lt__(self, other):
         return self.f() < other.f()
 
+    def __gt__(self, other):
+        return self.f() > other.f()
 
-# 실행 부분
-if __name__ == "__main__":
-    N = int(input("N 입력: "))
+N = int(input("배치할 퀸의 개수 : "))
 
-    # 초기 상태: 모든 행을 -1로 (아직 queen 없음)
-    puzzle = [-1] * N
-    goal = N
+puzzle = [-1] * N
 
-    # open 리스트 = 우선순위 큐
-    open_queue = queue.PriorityQueue()
-    open_queue.put(State(puzzle, goal))
-    closed_queue = []
-    count = 0
+open_queue = queue.PriorityQueue()
+open_queue.put(State(puzzle, 0, N))
+closed_queue = [ ]
+depth = 0
+count = 0
 
-    while not open_queue.empty():
-        current = open_queue.get()
-        count += 1
-        print(f"{count}번째 상태 (f={current.f()}, g={current.g()}, h={current.h()})")
+while not open_queue.empty():
+    current = open_queue.get()
+    count += 1
+    print(f"상태 {count}:")
+    print(current)
+
+    if current.depth == N and current.h() == 0:
+        print("탐색 성공! 최종 해:")
         print(current)
+        break
 
-        if current.depth == goal:  # N개의 queen을 다 배치했으면 성공
-            print("탐색 성공")
-            break
-
-        depth = current.depth + 1
-        for state in current.expand(depth):
-            if state not in closed_queue and state not in open_queue.queue:
-                open_queue.put(state)
-                closed_queue.append(current)
-    else:
-        print("탐색 실패")
+    depth = current.depth + 1
+    for state in current.expand():
+        if state not in closed_queue and state not in open_queue.queue:
+            open_queue.put(state)
+            closed_queue.append(current)
