@@ -1,7 +1,9 @@
 # 보드는1차원리스트로구현한다.
-game_board = [' ', ' ', ' ',
- ' ', ' ', ' ',
- ' ', ' ', ' ']
+game_board = [' ', ' ', ' ', ' ', ' ',
+ ' ', ' ', ' ', ' ', ' ',
+ ' ', ' ', ' ', ' ', ' ',
+ ' ', ' ', ' ', ' ', ' ',
+ ' ', ' ', ' ', ' ', ' ',]
  # 비어있는칸을찾아서인덱스를리스트로반환한다.
 def empty_cells(board):
      cells = []
@@ -24,10 +26,10 @@ def move(x, player):
  # 현재게임보드를그린다.
 def draw(board):
      for i, cell in enumerate(board):
-         if i%3 == 0:
-            print('\n----------------')
+         if i%5 == 0:
+            print('\n-------------------------')
          print('|', cell , '|', end='')
-     print('\n----------------')
+     print('\n-------------------------')
  # 보드의상태를평가한다.
 def evaluate(board):
      if check_win(board, 'X'):
@@ -41,17 +43,34 @@ def evaluate(board):
 # 1차원리스트에서동일한문자가수직선이나수평선, 대각선으로나타나면
 # 승리한것으로한다.
 def check_win(board, player):
-     win_conf = [
-     [board[0], board[1], board[2]],
-     [board[3], board[4], board[5]],
-     [board[6], board[7], board[8]],
-     [board[0], board[3], board[6]],
-     [board[1], board[4], board[7]],
-     [board[2], board[5], board[8]],
-     [board[0], board[4], board[8]],
-     [board[2], board[4], board[6]],
-     ]
-     return [player, player, player] in win_conf
+    N = 5
+    K = 3
+    # 1차원 → 2차원 변환
+    grid = [board[i * N:(i + 1) * N] for i in range(N)]
+
+    # 가로 & 세로
+    for i in range(N):
+        for j in range(N - K + 1):
+            # 가로
+            if all(grid[i][j + x] == player for x in range(K)):
+                return True
+            # 세로
+            if all(grid[j + x][i] == player for x in range(K)):
+                return True
+
+    # 대각선 ↘
+    for i in range(N - K + 1):
+        for j in range(N - K + 1):
+            if all(grid[i + x][j + x] == player for x in range(K)):
+                return True
+
+    # 대각선 ↙
+    for i in range(N - K + 1):
+        for j in range(K - 1, N):
+            if all(grid[i + x][j - x] == player for x in range(K)):
+                return True
+
+    return False
 
 # 1차원리스트에서동일한문자가수직선이나수평선, 대각선으로나타나면
 # 승리한것으로한다.
@@ -86,8 +105,42 @@ def minimax(board, depth, maxPlayer):
                 pos = p
     return pos, value
 
-player='X'
-player_turn = False
+def minimax_a_b(board, depth, maxPlayer, alpha = -10000, beta = 10000):
+    pos = -1
+
+    if depth == 0 or len(empty_cells(board)) == 0 or game_over(board):
+        return -1, evaluate(board)
+
+    if maxPlayer:
+        value = -10000
+        for p in empty_cells(board):
+            board[p] = 'X'
+            _, score = minimax_a_b(board, depth-1, False, alpha, beta)
+            board[p] = ' '
+            if score > value:
+                value = score
+                pos = p
+            alpha = max(alpha, value)
+            if alpha >= beta:
+                break  # 가지치기
+    else:
+        value = 10000
+        for p in empty_cells(board):
+            board[p] = 'O'
+            _, score = minimax_a_b(board, depth-1, True, alpha, beta)
+            board[p] = ' '
+            if score < value:
+                value = score
+                pos = p
+            beta = min(beta, value)
+            if alpha >= beta:
+                break  # 가지치기
+
+    return pos, value
+
+
+player='O'
+player_turn = True
 # 메인프로그램
 while True:
      draw(game_board)
@@ -95,10 +148,10 @@ while True:
         break
      if player_turn:
          i = int(input())
-         if move(i, 'O'):
+         if move(i, 'X'):
             player_turn = False
      else:
-         i, v = minimax(game_board, 9, player=='X')
+         i, v = minimax_a_b(game_board, 7, player=='O')
          move(i, player)
          player_turn = True
 
