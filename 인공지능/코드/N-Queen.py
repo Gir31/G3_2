@@ -1,94 +1,84 @@
+# 2021184002 길준형
 import queue
 
 class State:
-    def __init__(self, board, depth = 0, N = 0):
+    def __init__(self, board, depth=0, N=0, positions=None, h_score=None):
         self.board = board
         self.depth = depth
         self.N = N
 
+        self.positions = positions if positions is not None else []
+
+        self.h_score = h_score if h_score is not None else self.h()
+
     def get_new_board(self, row):
         new_board = self.board[:]
         new_board[self.depth] = row
-        return State(new_board, self.depth + 1, self.N)
+        new_positions = self.positions + [(row, self.depth)]
+        new_h = self.h(new_positions)
+        return State(new_board, self.depth + 1, self.N, new_positions, new_h)
 
     def expand(self):
         result = []
-        used_rows = set(self.board[:self.depth])  # 이미 배치된 행 번호
+        used_rows = [False]*self.N
+        for r, _ in self.positions:
+            used_rows[r] = True
         for row in range(self.N):
-            if row not in used_rows:  # 이미 사용된 행은 제외
+            if not used_rows[row]:
                 result.append(self.get_new_board(row))
         return result
-
-    def f(self):
-        return self.h() + self.g()
-
-    def h(self):
-        score = 0
-        positions = [(self.board[col], col) for col in range(self.depth)]
-
-        for i in range(len(positions)):
-            r1, c1 = positions[i]
-            for j in range(i + 1, len(positions)):
-                r2, c2 = positions[j]
-                # 같은 행
-                if r1 == r2:
-                    score += 1
-                # 같은 대각선
-                if abs(r1 - r2) == abs(c1 - c2):
-                    score += 1
-
-        return score
 
     def g(self):
         return self.depth
 
-    def __str__(self):
-        lines = []
-        for r in range(self.N):
-            line = []
-            for c in range(self.N):
-                if c < self.depth and self.board[c] == r:
-                    line.append('Q')
-                else:
-                    line.append('.')
-            lines.append(" ".join(line))
-        return "\n".join(lines) + "\n" + "-" * 20
+    def h(self, positions=None):
+        positions = positions if positions is not None else self.positions
+        score = 0
+        for i in range(len(positions)):
+            r1, c1 = positions[i]
+            for j in range(i+1, len(positions)):
+                r2, c2 = positions[j]
+                if abs(r1 - r2) == abs(c1 - c2):
+                    score += 1
+        return score
 
-    def __eq__(self, other):
-        return self.board == other.board
-
-    def __ne__(self, other):
-        return self.board != other.board
+    def f(self):
+        return self.g() + self.h_score
 
     def __lt__(self, other):
         return self.f() < other.f()
 
-    def __gt__(self, other):
-        return self.f() > other.f()
+    def __hash__(self):
+        return hash(tuple(self.board))
+
+    def __eq__(self, other):
+        return self.board == other.board
 
 N = int(input("배치할 퀸의 개수 : "))
-
-puzzle = [-1] * N
+puzzle = [-1]*N
 
 open_queue = queue.PriorityQueue()
-open_queue.put(State(puzzle, 0, N))
-closed_queue = [ ]
-depth = 0
+start = State(puzzle, 0, N)
+open_queue.put(start)
+closed_set = set()
 count = 0
 
 while not open_queue.empty():
     current = open_queue.get()
     count += 1
-    print(f"상태 {count}:")
-    print(current)
 
-    if current.depth == N and current.h() == 0:
-        print("탐색 성공! 최종 해:")
-        print(current)
+    if current.depth == N and current.h_score == 0:
+        print(f"탐색 성공! 시도 횟수: {count}")
+        for r in range(N):
+            line = ['.']*N
+            line[current.board[r]] = 'Q'
+            print(" ".join(line))
         break
 
-    depth = current.depth + 1
+    closed_set.add(tuple(current.board))
+
     for state in current.expand():
-        if state not in closed_queue and state not in open_queue.queue:
+        if tuple(state.board) not in closed_set:
             open_queue.put(state)
-            closed_queue.append(current)
+
+print("2021184002 길준형")
