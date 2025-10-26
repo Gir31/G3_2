@@ -3,7 +3,7 @@ import random
 POPULATION_SIZE = 4 # 개체 집단의 크기
 CROSS_RATE = 0.7
 MUTATION_RATE = 0.01 # 돌연 변이 확률
-SIZE = 5 # 하나의 염색체에서 유전자 개수
+SIZE = 8 # 하나의 염색체에서 유전자 개수
 
 # 염색체를 클래스로 정의한다.
 class Chromosome:
@@ -14,20 +14,41 @@ class Chromosome:
         if self.genes.__len__()==0: # 염색체가 초기 상태이면 초기화한다.
             i = 0
             while i<SIZE:
-                if random.random() >= 0.5: self.genes.append(1)
-                else: self.genes.append(0)
+                self.genes.append(random.randint(1, SIZE))
                 i += 1
+
+    def collision_check(self):
+        collision_count = 0
+
+        for i in range(SIZE - 1):
+            for j in range(i + 1, SIZE):
+                # 같은 행이면 충돌
+                if self.genes[i] == self.genes[j]:
+                    collision_count += 1
+                # 같은 대각선이면 충돌
+                elif abs(self.genes[i] - self.genes[j]) == abs(i - j):
+                    collision_count += 1
+
+        return collision_count
+
 
     def cal_fitness(self): # 적합도를 계산한다.
         self.fitness = 0
-        value = 0
 
-        for i in range(SIZE):
-            value += self.genes[i]*pow(2,SIZE-1-i)
-
-        self.fitness = value
+        self.fitness = 28 - self.collision_check()
 
         return self.fitness
+
+    def print_board(self):
+        for i in range(1, SIZE + 1):
+            line = ""
+            for j in range(SIZE):
+                if self.genes[j] == i:
+                    line += "♛ "
+                else:
+                    line += ". "
+
+            print(line)
 
     def __str__(self):
         return self.genes.__str__()
@@ -72,11 +93,8 @@ def crossover(pop):
 def mutate(c):
         for i in range(SIZE):
             if random.random() < MUTATION_RATE:
-                if c.genes[i]:
-                    c.genes[i] = 0
+                c.genes[i] = random.choice([x for x in range(1, SIZE + 1) if x != c.genes[i]])
 
-                else:
-                    c.genes[i] = 1
 
 
 # 메인 프로그램
@@ -94,9 +112,7 @@ print("세대 번호=", count)
 print_p(population)
 count=1
 
-
-
-while population[0].cal_fitness() < 31:
+while population[0].cal_fitness() < 28:
     new_pop = []
     # 선택과 교차 연산
     for _ in range(POPULATION_SIZE//2):
@@ -114,6 +130,4 @@ while population[0].cal_fitness() < 31:
     print_p(population)
     count += 1
 
-    if count > 100 : break
-
-# 잘못된 부분 수정, 돌연변이 넣기?
+population[0].print_board()
